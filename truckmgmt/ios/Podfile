@@ -40,6 +40,10 @@ target 'truckmgmt' do
   pod 'react-native-webview', :path => '../node_modules/react-native-webview'
 
 
+  pod 'ReactNativeGetLocation', :path => '../node_modules/react-native-get-location'
+
+  pod 'react-native-geocoder', :path => '../node_modules/react-native-geocoder'
+
   target 'truckmgmtTests' do
     inherit! :search_paths
     # Pods for testing

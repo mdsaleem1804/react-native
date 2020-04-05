@@ -1,9 +1,20 @@
 /*Home Screen With buttons to navigate to different options*/
 import React from 'react';
-import {View, StyleSheet, Button, Text, Picker, Alert} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Button,
+  Text,
+  Picker,
+  Alert,
+  KeyboardAvoidingView,
+  ScrollView,
+} from 'react-native';
 import Mytextinput from './components/Mytextinput';
 import SendSMS from 'react-native-sms';
-//import Geolocation from '@react-native-community/geolocation';
+import GetLocation from 'react-native-get-location';
+import Geocoder from 'react-native-geocoder';
+
 //import LoadMap from '../pages/components/User/LoadHtml';
 export default class DriverHomePage extends React.Component {
   constructor(props) {
@@ -12,13 +23,70 @@ export default class DriverHomePage extends React.Component {
       selectedSource: '',
       selectedDestination: '',
       state_login_mobileno: '',
-      owner_phone: '9578795653',
+      owner_phone: '',
       state_remarks: '',
       listItems: [],
       listItemsInner: [],
       latitude: '',
       longitude: '',
+      address: '',
     };
+  }
+  async componentDidMount() {
+    const {navigation} = this.props;
+    const login_mobileno = navigation.getParam('login_mobileno', '');
+    this.setState({
+      state_login_mobileno: login_mobileno,
+    });
+
+    await GetLocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 15000,
+    })
+      .then((location) => this.setAddress(location))
+
+      .catch((error) => {
+        //const {code, message} = error;
+        //console.warn(code, message);
+      });
+    fetch('https://test-react-5b3fc.firebaseio.com/truckmgmt.json')
+      .then((response) => response.json())
+      .then((data) => this.setState({listItems: data}))
+      //.then(data => console.log(data))
+      .then(() => this.fetchOwnerMobileNo())
+      .catch((error) => {
+        // console.error(error);
+      });
+  }
+  setAddress(location) {
+    var latandlong = {
+      lat: location.latitude,
+      lng: location.longitude,
+    };
+
+    Geocoder.geocodePosition(latandlong).then((res) => {
+      this.setState({address: res[0].formattedAddress});
+      //console.log(res[0].formattedAddress);
+    });
+  }
+  fetchOwnerMobileNo() {
+    const result = Object.keys(this.state.listItems).map(
+      (key) => this.state.listItems[key],
+    );
+    // console.log(this.state.selectedSource);
+    const source = 'owner';
+    this.setState({
+      listItemsInner: result.filter(function (user) {
+        return user.Source == source; // filters and returns a new array
+      }),
+    });
+
+    const fetchOwnerMobileNotext = this.state.listItemsInner.map(
+      (item) => item.Remarks,
+    );
+
+    console.log(fetchOwnerMobileNotext);
+    this.setState({owner_phone: JSON.stringify(fetchOwnerMobileNotext)});
   }
   checkSourceDestination() {
     if (this.state.selectedSource == '') {
@@ -40,14 +108,14 @@ export default class DriverHomePage extends React.Component {
       //.then(data => console.log(data))
       .then(() => this.fetchSelectedData())
       .catch((error) => {
-        console.error(error);
+        // console.error(error);
       });
   }
   fetchSelectedData() {
     const result = Object.keys(this.state.listItems).map(
       (key) => this.state.listItems[key],
     );
-    console.log(this.state.selectedSource);
+    // console.log(this.state.selectedSource);
     const source = this.state.selectedSource;
     const destination = this.state.selectedDestination;
     this.setState({
@@ -91,9 +159,9 @@ export default class DriverHomePage extends React.Component {
       selectedDestination,
       state_login_mobileno,
       state_remarks,
+      address,
     } = this.state;
-    const message =
-      selectedSource + ' to ' + selectedDestination + ' : ' + state_remarks;
+    const message = 'Problem:' + state_remarks + ' /  Address : ' + address;
     if (selectedSource == selectedDestination) {
       Alert.alert('Please Choose Different Source / Destination');
       return;
@@ -121,7 +189,7 @@ export default class DriverHomePage extends React.Component {
         Source: selectedSource,
         Destination: selectedDestination,
         ReportedBy: state_login_mobileno,
-        Remarks: state_remarks,
+        Remarks: message,
       }),
     })
       .then((response) => response.json())
@@ -130,66 +198,64 @@ export default class DriverHomePage extends React.Component {
         //Alert.alert(responseJson.name);
       })
       .catch((error) => {
-        console.error(error);
+        // console.error(error);
       });
     Alert.alert('Inserted');
     this.SendSMSFromApp(message);
   };
-  componentWillMount() {
-    const {navigation} = this.props;
-    const login_mobileno = navigation.getParam('login_mobileno', '');
-    this.setState({
-      state_login_mobileno: login_mobileno,
-    });
-    //Geolocation.getCurrentPosition((info) => console.log(info.coords.latitude));
-  }
 
   render() {
     return (
-      <View style={{flex: 1, margin: 20}}>
-        <View>
-          <Text style={{fontWeight: 'bold'}}>Source : </Text>
-          <Picker
-            selectedValue={this.state.selectedSource}
-            onValueChange={(itemValue) =>
-              this.setState({selectedSource: itemValue})
-            }>
-            <Picker.Item label="Select Source" value="" />
-            <Picker.Item label="Tirunelveli" value="Tirunelveli" />
-            <Picker.Item label="Kovilpatti" value="Kovilpatti" />
-            <Picker.Item label="Madurai" value="Madurai" />
-            <Picker.Item label="Trichy" value="Trichy" />
-          </Picker>
-          <Text style={{fontWeight: 'bold'}}>Destination : </Text>
-          <Picker
-            selectedValue={this.state.selectedDestination}
-            onValueChange={(itemValue) =>
-              this.setState({selectedDestination: itemValue})
-            }>
-            <Picker.Item label="Select Destination" value="" />
-            <Picker.Item label="Tirunelveli" value="Tirunelveli" />
-            <Picker.Item label="Kovilpatti" value="Kovilpatti" />
-            <Picker.Item label="Madurai" value="Madurai" />
-            <Picker.Item label="Trichy" value="Trichy" />
-          </Picker>
-          <Text style={{fontWeight: 'bold'}}>Destination/Remarks </Text>
+      <KeyboardAvoidingView style={{flex: 1, margin: 20}}>
+        <ScrollView>
+          <View>
+            <View>
+              <Text style={{fontWeight: 'bold'}}>Source : </Text>
+              <Picker
+                selectedValue={this.state.selectedSource}
+                onValueChange={(itemValue) =>
+                  this.setState({selectedSource: itemValue})
+                }>
+                <Picker.Item label="Select Source" value="" />
+                <Picker.Item label="Tirunelveli" value="Tirunelveli" />
+                <Picker.Item label="Kovilpatti" value="Kovilpatti" />
+                <Picker.Item label="Madurai" value="Madurai" />
+                <Picker.Item label="Trichy" value="Trichy" />
+              </Picker>
+              <Text style={{fontWeight: 'bold'}}>Destination : </Text>
+              <Picker
+                selectedValue={this.state.selectedDestination}
+                onValueChange={(itemValue) =>
+                  this.setState({selectedDestination: itemValue})
+                }>
+                <Picker.Item label="Select Destination" value="" />
+                <Picker.Item label="Tirunelveli" value="Tirunelveli" />
+                <Picker.Item label="Kovilpatti" value="Kovilpatti" />
+                <Picker.Item label="Madurai" value="Madurai" />
+                <Picker.Item label="Trichy" value="Trichy" />
+              </Picker>
+              <Text style={{fontWeight: 'bold'}}>Destination/Remarks </Text>
 
-          <Mytextinput
-            onChangeText={(state_remarks) =>
-              this.setState({state_remarks})
-            }></Mytextinput>
-          <View style={styles.buttonContainer}>
-            <Button
-              title="FIND"
-              onPress={() => this.checkSourceDestination()}
-            />
+              <Mytextinput
+                onChangeText={(state_remarks) =>
+                  this.setState({state_remarks})
+                }></Mytextinput>
+              <View style={styles.buttonContainer}>
+                <Button
+                  title="FIND"
+                  onPress={() => this.checkSourceDestination()}
+                />
+              </View>
+              <View style={styles.buttonContainer}>
+                <Button title="Threat" onPress={() => this.InsertThreat()} />
+              </View>
+            </View>
+            <View style={styles.map}>
+              <Text>{this.state.address}</Text>
+            </View>
           </View>
-          <View style={styles.buttonContainer}>
-            <Button title="Threat" onPress={() => this.InsertThreat()} />
-          </View>
-        </View>
-        <View style={styles.map}></View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 }

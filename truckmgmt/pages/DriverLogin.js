@@ -19,20 +19,20 @@ export default class DriverLogin extends React.Component {
       password: '',
     };
   }
-  handleMobileno = text => {
+  handleMobileno = (text) => {
     this.setState({mobileno: text});
   };
-  handlePassword = text => {
+  handlePassword = (text) => {
     this.setState({password: text});
   };
   login = (mobileno, pass) => {
-    db.transaction(tx => {
+    db.transaction((tx) => {
       tx.executeSql(
         'SELECT * FROM table_driver where driver_phone=? and driver_password=?',
         [mobileno, pass],
         (tx, results) => {
           var len = results.rows.length;
-          console.log(results);
+          // console.log(results);
           if (len > 0) {
             Alert.alert(
               'Success',
