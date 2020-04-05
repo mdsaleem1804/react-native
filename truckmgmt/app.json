@@ -1,0 +1,10 @@
+{
+  "name": "truckmgmt",
+  "displayName": "truckmgmt",
+  "expo": {
+    "name": "My app",
+    "slug": "my-app",
+    "sdkVersion": "UNVERSIONED",
+    "privacy": "public"
+  }
+}
